@@ -1,6 +1,6 @@
 # cocoapods-testing
 
-A description of cocoapods-testing.
+Run tests for any pod from the command line without any prior knowledge.
 
 ## Installation
 

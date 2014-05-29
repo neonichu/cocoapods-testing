@@ -1,1 +1,1 @@
-require 'pod/command/spec/testing'
+require 'pod/command/lib/testing'

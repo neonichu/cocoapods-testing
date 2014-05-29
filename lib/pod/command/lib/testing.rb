@@ -1,18 +1,12 @@
 module Pod
   class Command
-    class Spec
-      # This is an example of a cocoapods plugin adding a subcommand to
-      # the 'pod spec' command. Adapt it to suit your needs.
+    class Lib
       #
       # @todo Create a PR to add your plugin to CocoaPods/cocoapods.org
       #       in the `plugins.json` file, once your plugin is released.
       #
-      class Testing < Spec
-        self.summary = "Short description of cocoapods-testing."
-
-        self.description = <<-DESC
-          Longer description of cocoapods-testing.
-        DESC
+      class Testing < Lib
+        self.summary = "Run tests for any pod from the command line without any prior knowledge."
 
         self.arguments = 'NAME'
 
