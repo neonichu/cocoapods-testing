@@ -68,6 +68,7 @@ module Pod
             t.subtask(unit: scheme_name) do |s|
               # TODO: version should be configurable
               s.ios_versions = %w(7.1)
+              s.destination('name=iPhone Retina (4-inch)')
             end
           end
 
