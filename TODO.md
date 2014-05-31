@@ -1,0 +1,3 @@
+- allow using commands from .travis.yml as an alternative
+- rubocop ALL the things
+- options?
