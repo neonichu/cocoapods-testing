@@ -3,12 +3,12 @@ require 'xctasks/test_task'
 
 module Pod
   class Command
-    class Lib
+    class Spec
 
       # @todo Create a PR to add your plugin to CocoaPods/cocoapods.org
       #       in the `plugins.json` file, once your plugin is released.
 
-      class Testing < Lib
+      class Testing < Spec
         self.summary = 'Run tests for any pod from the command line without any prior knowledge.'
 
         def handle_workspace(workspace, workspace_location)
