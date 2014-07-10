@@ -14,6 +14,9 @@ module Pod
         def handle_workspace(workspace, workspace_location)
           workspace.file_references.each do |ref|
             if ref.path.end_with?('.xcodeproj')
+              if not File.exists? ref.path
+                next
+              end
               project = Xcodeproj::Project.open(ref.path)
 
               schemes = Dir[Xcodeproj::XCScheme.shared_data_dir(ref.path).to_s + '/*']
