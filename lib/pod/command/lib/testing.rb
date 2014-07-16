@@ -90,16 +90,30 @@ module Pod
           end
         end
 
+        def handle_workspaces_in_dir(dir)
+          workspaces_in_dir(dir).each do |workspace|
+              next if workspace.end_with?('.xcodeproj')
+
+              wrkspace = Xcodeproj::Workspace.new_from_xcworkspace(workspace)
+              handle_workspace(wrkspace, workspace)
+            end
+        end
+
         def run
           podspecs_to_check.each do # |path|
             # TODO: How to link specs to projects/workspaces?
             # spec = Specification.from_file(path)
 
-            workspaces_in_dir(Pathname.pwd).each do |workspace|
-              next if workspace.end_with?('.xcodeproj')
+            handle_workspaces_in_dir(Pathname.pwd)
 
-              wrkspace = Xcodeproj::Workspace.new_from_xcworkspace(workspace)
-              handle_workspace(wrkspace, workspace)
+            Dir['*'].each do |dir| 
+              next if !File.directory?(dir)
+              original_dir = Pathname.pwd
+              Dir.chdir(dir)
+
+              handle_workspaces_in_dir(Pathname.pwd)
+
+              Dir.chdir(original_dir)
             end
           end
         end
