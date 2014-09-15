@@ -11,6 +11,12 @@ module Pod
       class Testing < Lib
         self.summary = 'Run tests for any pod from the command line without any prior knowledge.'
 
+        def self.options
+          [
+            ['--verbose', 'Show full xcodebuild output.']
+          ]
+        end
+
         def handle_workspace(workspace, workspace_location)
           workspace.file_references.each do |ref|
             if ref.path.end_with?('.xcodeproj')
@@ -64,8 +70,7 @@ module Pod
           # TODO: Figure out what this was supposed to do:
           #   new(test: 'server:autostart')
           XCTasks::TestTask.new do |t|
-            #t.runner      = :xcodebuild
-            t.runner      = :xcpretty
+            t.runner = @@verbose ? :xcodebuild : :xcpretty
             t.workspace   = workspace
 
             t.subtask(unit: scheme_name) do |s|
@@ -97,6 +102,11 @@ module Pod
               wrkspace = Xcodeproj::Workspace.new_from_xcworkspace(workspace)
               handle_workspace(wrkspace, workspace)
             end
+        end
+
+        def initialize(argv)
+          @@verbose = argv.flag?('verbose')
+          super
         end
 
         def run
