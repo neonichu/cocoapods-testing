@@ -43,8 +43,6 @@ module Pod
                 end
 
                 if product_type.end_with?('bundle.unit-test')
-                  puts scheme_map
-
                   scheme = scheme_map[target.name]
                   # Fallback to first scheme if none is found for this target
                   scheme = scheme_map.first[1] unless scheme && scheme.length > 0
