@@ -17,6 +17,23 @@ module Pod
           ]
         end
 
+        def initialize(argv)
+          @@verbose = argv.flag?('verbose')
+          @@args = argv.arguments!
+          super
+        end
+
+        def self.handle_workspaces_in_dir(dir)
+          workspaces_in_dir(dir).each do |workspace_path|
+              next if workspace_path.end_with?('.xcodeproj')
+
+              workspace = Xcodeproj::Workspace.new_from_xcworkspace(workspace_path)
+              yield workspace, workspace_path
+            end
+        end
+
+        :private
+
         def handle_workspace(workspace, workspace_location)
           workspace.file_references.each do |ref|
             if ref.path.end_with?('.xcodeproj')
@@ -88,7 +105,7 @@ module Pod
           Rake::Task['test:unit'].invoke
         end
 
-        def workspaces_in_dir(dir)
+        def self.workspaces_in_dir(dir)
           glob_match = Dir.glob("#{dir}/**/*.xc{odeproj,workspace}")
           glob_match = glob_match.reject do |p|
             next true if p.include?('Pods.xcodeproj')
@@ -98,34 +115,23 @@ module Pod
           end
         end
 
-        def handle_workspaces_in_dir(dir)
-          workspaces_in_dir(dir).each do |workspace|
-              next if workspace.end_with?('.xcodeproj')
-
-              wrkspace = Xcodeproj::Workspace.new_from_xcworkspace(workspace)
-              handle_workspace(wrkspace, workspace)
-            end
-        end
-
-        def initialize(argv)
-          @@verbose = argv.flag?('verbose')
-          @@args = argv.arguments!
-          super
-        end
-
         def run
           podspecs_to_check.each do # |path|
             # TODO: How to link specs to projects/workspaces?
             # spec = Specification.from_file(path)
 
-            handle_workspaces_in_dir(Pathname.pwd)
+            self.class.handle_workspaces_in_dir(Pathname.pwd) do |workspace, workspace_path|
+              handle_workspace(workspace, workspace_path)
+            end
 
             Dir['*'].each do |dir| 
               next if !File.directory?(dir)
               original_dir = Pathname.pwd
               Dir.chdir(dir)
 
-              handle_workspaces_in_dir(Pathname.pwd)
+              self.class.handle_workspaces_in_dir(Pathname.pwd) do |workspace, workspace_path|
+                handle_workspace(workspace, workspace_path)
+              end
 
               Dir.chdir(original_dir)
             end
