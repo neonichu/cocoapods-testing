@@ -70,8 +70,11 @@ module Pod
           # TODO: Figure out what this was supposed to do:
           #   new(test: 'server:autostart')
           XCTasks::TestTask.new do |t|
+            t.actions = %w(clean build test)
             t.runner = @@verbose ? :xcodebuild : :xcpretty
             t.workspace   = workspace
+
+            t.actions << @@args unless @@args.nil?
 
             t.subtask(unit: scheme_name) do |s|
               # TODO: version should be configurable
@@ -106,6 +109,7 @@ module Pod
 
         def initialize(argv)
           @@verbose = argv.flag?('verbose')
+          @@args = argv.arguments!
           super
         end
 
