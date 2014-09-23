@@ -95,8 +95,8 @@ module Pod
 
             t.subtask(unit: scheme_name) do |s|
               # TODO: version should be configurable
-              s.ios_versions = %w(7.1)
-              s.destination('name=iPhone Retina (4-inch)')
+              s.ios_versions = [versions.last]
+              s.destination('name='+simulators.first)
             end
           end
 
@@ -113,6 +113,18 @@ module Pod
             sister_workspace = p.chomp(File.extname(p.to_s)) + '.xcworkspace'
             p.end_with?('.xcodeproj') && glob_match.include?(sister_workspace)
           end
+        end
+
+        def simulators
+          sims = `xcrun simctl list 2>/dev/null`.split("\n")
+          sims = sims.select { |sim| sim[/Booted|Shutdown/] }
+          sims.map { |sim| sim.gsub(/^\s+(.+?) \(.*/, '\1') }
+        end
+
+        def versions
+          sdks = `xcodebuild -version -sdk 2>/dev/null`.split("\n")
+          sdks = sdks.select { |sdk| sdk[/iphonesimulator/] }
+          sdks.map { |sdk| sdk.gsub(/.*\(iphonesimulator(.*)\)/, '\1') }
         end
 
         def run
