@@ -96,7 +96,13 @@ module Pod
             t.subtask(unit: scheme_name) do |s|
               # TODO: version should be configurable
               s.ios_versions = [versions.last]
-              s.destination('name='+simulators.first)
+
+              # TODO: simulator should be configurable
+              if simulators && simulators.count > 0
+                s.destination('name='+simulators.first)
+              else
+                s.destination('name=iPhone Retina (4-inch)')
+              end
             end
           end
 
