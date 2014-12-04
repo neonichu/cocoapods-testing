@@ -13,13 +13,17 @@ module Pod
 
         def self.options
           [
+            ['--dry-run', 'Show which tests would be executed.'],
             ['--verbose', 'Show full xcodebuild output.']
           ]
         end
 
         def initialize(argv)
+          @@dry_run = argv.flag?('dry-run')
           @@verbose = argv.flag?('verbose')
           @@args = argv.arguments!
+
+          @@found_tests = false
           super
         end
 
@@ -84,6 +88,8 @@ module Pod
         end
 
         def run_tests(workspace, target_name, scheme_name)
+          @@found_tests = true
+
           # TODO: Figure out what this was supposed to do:
           #   new(test: 'server:autostart')
           XCTasks::TestTask.new do |t|
@@ -108,7 +114,7 @@ module Pod
 
           UI.puts 'Running tests for ' + target_name
           # puts Rake.application.tasks
-          Rake::Task['test:unit'].invoke
+          Rake::Task['test:unit'].invoke unless @@dry_run
         end
 
         def self.workspaces_in_dir(dir)
@@ -152,6 +158,11 @@ module Pod
               end
 
               Dir.chdir(original_dir)
+            end
+
+            if not @@found_tests
+              puts('No suitable test targets found.'.yellow)
+              exit(1)
             end
           end
         end
