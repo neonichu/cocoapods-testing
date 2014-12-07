@@ -129,8 +129,6 @@ module Pod
         def run_tests(workspace, target_name, scheme_name)
           @@found_tests = true
 
-          # TODO: Figure out what this was supposed to do:
-          #   new(test: 'server:autostart')
           XCTasks::TestTask.new do |t|
             t.actions = %w(clean build test)
             t.runner = @@verbose ? :xcodebuild : :xcpretty
@@ -152,7 +150,6 @@ module Pod
           end
 
           UI.puts 'Running tests for ' + target_name
-          # puts Rake.application.tasks
           Rake::Task['test:unit'].invoke unless @@dry_run
         end
 
