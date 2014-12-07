@@ -27,16 +27,53 @@ module Pod
           super
         end
 
+        def self.handle_projects_in_dir(dir)
+          workspaces_in_dir(dir).each do |workspace_path|
+            next if workspace_path.end_with?('.xcworkspace')
+
+            project = Xcodeproj::Project.open(Pathname.new(workspace_path))
+            yield project, workspace_path
+          end
+        end
+
         def self.handle_workspaces_in_dir(dir)
           workspaces_in_dir(dir).each do |workspace_path|
-              next if workspace_path.end_with?('.xcodeproj')
+            next if workspace_path.end_with?('.xcodeproj')
 
-              workspace = Xcodeproj::Workspace.new_from_xcworkspace(workspace_path)
-              yield workspace, workspace_path
-            end
+            workspace = Xcodeproj::Workspace.new_from_xcworkspace(workspace_path)
+            yield workspace, workspace_path
+          end
         end
 
         :private
+
+        def handle_xcode_artifacts_in_dir(dir)
+          self.class.handle_projects_in_dir(dir) do |project, project_path|
+            handle_project(project, project_path)
+          end
+
+          self.class.handle_workspaces_in_dir(dir) do |workspace, workspace_path|
+            handle_workspace(workspace, workspace_path)
+          end
+        end
+
+        def handle_project(project, project_location)
+          project.targets.each do |target|
+            product_type = nil
+
+            begin
+              product_type = target.product_type.to_s
+            rescue
+              next
+            end
+
+            if product_type.end_with?('bundle.unit-test')
+              @@found_tests = true
+              # TODO: Actually run the tests
+              puts File.basename(project_location) + ' ' + target.name
+            end
+          end
+        end
 
         def handle_workspace(workspace, workspace_location)
           workspace.file_references.each do |ref|
@@ -51,6 +88,7 @@ module Pod
 
               scheme_map = Hash.new
               schemes.each do |path|
+                next if File.directory?(path)
                 doc = REXML::Document.new(File.new(path))
                 REXML::XPath.each(doc, '//TestAction') do |action|
                   blueprint_name = REXML::XPath.first(action, 
@@ -118,6 +156,7 @@ module Pod
           Rake::Task['test:unit'].invoke unless @@dry_run
         end
 
+        # TODO: Refactor to remove all projects which are part of a workspace
         def self.workspaces_in_dir(dir)
           glob_match = Dir.glob("#{dir}/**/*.xc{odeproj,workspace}")
           glob_match = glob_match.reject do |p|
@@ -145,18 +184,14 @@ module Pod
             # TODO: How to link specs to projects/workspaces?
             # spec = Specification.from_file(path)
 
-            self.class.handle_workspaces_in_dir(Pathname.pwd) do |workspace, workspace_path|
-              handle_workspace(workspace, workspace_path)
-            end
+            handle_xcode_artifacts_in_dir(Pathname.pwd)
 
             Dir['*'].each do |dir| 
               next if !File.directory?(dir)
               original_dir = Pathname.pwd
               Dir.chdir(dir)
 
-              self.class.handle_workspaces_in_dir(Pathname.pwd) do |workspace, workspace_path|
-                handle_workspace(workspace, workspace_path)
-              end
+              handle_xcode_artifacts_in_dir(Pathname.pwd)
 
               Dir.chdir(original_dir)
             end
