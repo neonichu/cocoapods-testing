@@ -8,4 +8,4 @@ Run tests for any pod from the command line without any prior knowledge.
 
 ## Usage
 
-    $ pod spec testing POD_NAME
+    $ pod lib testing POD_NAME
