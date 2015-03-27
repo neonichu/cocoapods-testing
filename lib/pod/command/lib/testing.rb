@@ -23,6 +23,7 @@ module Pod
           @@verbose = argv.flag?('verbose')
           @@args = argv.arguments!
 
+          @@found_projects = []
           @@found_tests = false
           super
         end
@@ -48,16 +49,33 @@ module Pod
         :private
 
         def handle_xcode_artifacts_in_dir(dir)
-          self.class.handle_projects_in_dir(dir) do |project, project_path|
-            handle_project(project, project_path)
-          end
-
           self.class.handle_workspaces_in_dir(dir) do |workspace, workspace_path|
             handle_workspace(workspace, workspace_path)
           end
+
+          self.class.handle_projects_in_dir(dir) do |project, project_path|
+            handle_project(project, project_path)
+          end
         end
 
-        def handle_project(project, project_location)
+        def handle_project(project, project_location, workspace_location = nil)
+          return if @@found_projects.include?(project_location)
+
+          schemes = Dir[Xcodeproj::XCScheme.shared_data_dir(project_location).to_s + '/*']
+          schemes += Dir[Xcodeproj::XCScheme.user_data_dir(project_location).to_s + '/*']
+
+          scheme_map = Hash.new
+          schemes.each do |path|
+            next if File.directory?(path)
+            doc = REXML::Document.new(File.new(path))
+            REXML::XPath.each(doc, '//TestAction') do |action|
+              blueprint_name = REXML::XPath.first(action, 
+                '//BuildableReference/@BlueprintName').value
+              scheme_name = File.basename(path, '.xcscheme')
+              scheme_map[blueprint_name] = scheme_name
+            end
+          end
+
           project.targets.each do |target|
             product_type = nil
 
@@ -68,9 +86,12 @@ module Pod
             end
 
             if product_type.end_with?('bundle.unit-test')
-              @@found_tests = true
-              # TODO: Actually run the tests
-              puts File.basename(project_location) + ' ' + target.name
+              scheme = scheme_map[target.name]
+              # Fallback to first scheme if none is found for this target
+              next if not scheme_map.first
+              scheme = scheme_map.first[1] unless scheme && scheme.length > 0
+              @@found_projects << project_location
+              run_tests(workspace_location || project_location, target.name, scheme)
             end
           end
         end
@@ -82,39 +103,7 @@ module Pod
                 next
               end
               project = Xcodeproj::Project.open(ref.path)
-
-              schemes = Dir[Xcodeproj::XCScheme.shared_data_dir(ref.path).to_s + '/*']
-              schemes += Dir[Xcodeproj::XCScheme.user_data_dir(ref.path).to_s + '/*']
-
-              scheme_map = Hash.new
-              schemes.each do |path|
-                next if File.directory?(path)
-                doc = REXML::Document.new(File.new(path))
-                REXML::XPath.each(doc, '//TestAction') do |action|
-                  blueprint_name = REXML::XPath.first(action, 
-                    '//BuildableReference/@BlueprintName').value
-                  scheme_name = File.basename(path, '.xcscheme')
-                  scheme_map[blueprint_name] = scheme_name
-                end
-              end
-
-              project.targets.each do |target|
-                product_type = nil
-
-                begin
-                  product_type = target.product_type.to_s
-                rescue
-                  next
-                end
-
-                if product_type.end_with?('bundle.unit-test')
-                  scheme = scheme_map[target.name]
-                  # Fallback to first scheme if none is found for this target
-                  next if not scheme_map.first
-                  scheme = scheme_map.first[1] unless scheme && scheme.length > 0
-                  run_tests(workspace_location, target.name, scheme)
-                end
-              end
+              handle_project(project, ref.path, workspace_location)
             end
           end
         end
@@ -132,7 +121,12 @@ module Pod
           XCTasks::TestTask.new do |t|
             t.actions = %w(clean build test)
             t.runner = @@verbose ? :xcodebuild : :xcpretty
-            t.workspace   = workspace
+
+            if workspace.end_with? 'workspace'
+              t.workspace   = workspace
+            else
+              t.project = workspace
+            end
 
             t.actions << @@args unless @@args.nil?
 
