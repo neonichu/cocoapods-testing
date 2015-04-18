@@ -98,12 +98,13 @@ module Pod
 
         def handle_workspace(workspace, workspace_location)
           workspace.file_references.each do |ref|
-            if ref.path.end_with?('.xcodeproj')
-              if not File.exists? ref.path
+            ref_path = File.absolute_path(ref.path, Pathname.new(workspace_location).dirname)
+            if ref_path.end_with?('.xcodeproj')
+              if not File.exists? ref_path
                 next
               end
-              project = Xcodeproj::Project.open(ref.path)
-              handle_project(project, ref.path, workspace_location)
+              project = Xcodeproj::Project.open(ref_path)
+              handle_project(project, ref_path, workspace_location)
             end
           end
         end
