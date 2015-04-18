@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    cocoapods-testing (0.0.6)
+    cocoapods-testing (0.2.0)
       xctasks (>= 0.5.0)
 
 GEM
